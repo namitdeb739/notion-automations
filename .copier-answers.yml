@@ -1,0 +1,21 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v1.1.0
+_src_path: gh:namitdeb739/python-template
+author_email: namitdeb739@gmail.com
+author_name: Namit Deb
+ci_github: true
+description: Automation scripts to enhance personal notion usage
+github_user: namitdeb739
+package_name: notion_automations
+project_name: notion-automations
+security: basic
+testing: standard
+use_api: false
+use_cli: true
+use_db: false
+use_devcontainer: false
+use_docker: none
+use_docs: true
+use_iot: false
+use_ml: false
+use_typecheck: true
