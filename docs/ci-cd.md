@@ -15,11 +15,9 @@ All jobs use [`astral-sh/setup-uv`](https://github.com/astral-sh/setup-uv) with 
 
 Workflows pin third-party and first-party GitHub Actions to immutable commit SHAs, and set an explicit `uv` version for reproducibility.
 
-
 ## Docs deploy (`docs.yml`)
 
 On push to `main`, builds the MkDocs site and deploys to GitHub Pages. `just init-remote` enables Pages automatically.
-
 
 ## Standards enforcement
 
@@ -46,10 +44,8 @@ Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`
 `just init-remote` automatically configures branch protection on `main`:
 
 - **Required status checks**: lint, type-check, test (3.11/3.12/3.13), audit
-
 - **Require up-to-date branches** before merge
 - **Block force pushes** and branch deletion
-
 
 ## Publishing to PyPI (`publish.yml`)
 
@@ -58,4 +54,3 @@ Triggers on GitHub Releases using [trusted publishers](https://docs.pypi.org/tru
 1. Go to [pypi.org](https://pypi.org) → your project → Publishing → Add a new publisher
 2. Enter: repo `namitdeb739/notion-automations`, workflow `publish.yml`, environment `pypi`
 3. Create a GitHub Release: builds with `uv build` and publishes automatically
-

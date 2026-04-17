@@ -782,6 +782,23 @@ wheels = [
 ]
 
 [[package]]
+name = "ics"
+version = "0.7.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "arrow" },
+    { name = "attrs" },
+    { name = "python-dateutil" },
+    { name = "six" },
+    { name = "tatsu", version = "5.15.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "tatsu", version = "5.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/43/fa/2cb7cbe23566140f011da4fec280d4873da4389c8b838bb3e5ce3fc39b16/ics-0.7.2.tar.gz", hash = "sha256:6743539bca10391635249b87d74fcd1094af20b82098bebf7c7521df91209f05", size = 190643, upload-time = "2022-07-06T11:25:41.666Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0a/95/e04dea5cf29bdf5005f5aa7ccf0a2f9724b877722d89f8286dc3785a7cdc/ics-0.7.2-py2.py3-none-any.whl", hash = "sha256:5fcf4d29ec6e7dfcb84120abd617bbba632eb77b097722b7df70e48dbcf26103", size = 40086, upload-time = "2022-07-06T11:25:36.536Z" },
+]
+
+[[package]]
 name = "identify"
 version = "2.6.18"
 source = { registry = "https://pypi.org/simple" }
@@ -1784,6 +1801,9 @@ name = "notion-automations"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "ics" },
+    { name = "notion-client" },
+    { name = "questionary" },
     { name = "typer" },
 ]
 
@@ -1799,11 +1819,17 @@ dev = [
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "python-dotenv" },
     { name = "ruff" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "typer", specifier = ">=0.12" }]
+requires-dist = [
+    { name = "ics", specifier = ">=0.7.2" },
+    { name = "notion-client", specifier = ">=3.0.0" },
+    { name = "questionary", specifier = ">=2.1.1" },
+    { name = "typer", specifier = ">=0.12" },
+]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1817,7 +1843,20 @@ dev = [
     { name = "pre-commit", specifier = ">=3.7" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-cov", specifier = ">=5.0" },
+    { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "ruff", specifier = ">=0.5" },
+]
+
+[[package]]
+name = "notion-client"
+version = "3.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a5/39/60afcbc0148c3dafaaefe851ae3f058077db49d66288dfb218a11a57b997/notion_client-3.0.0.tar.gz", hash = "sha256:05c4d2b4fa3491dc0de21c9c826277202ea8b8714077ee7f51a6e1a09ab23d0f", size = 31357, upload-time = "2026-02-16T11:15:48.024Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/aa/ce/6b03f9aedd2edfcc28e23ced5c2582d543f6ddbb2be5c570533f02890b27/notion_client-3.0.0-py2.py3-none-any.whl", hash = "sha256:177fc3d2ace7e8ef69cf96f46269e8a66071c2c7c526194bf06ce7925853e759", size = 18746, upload-time = "2026-02-16T11:15:46.602Z" },
 ]
 
 [[package]]
@@ -2283,6 +2322,15 @@ wheels = [
 ]
 
 [[package]]
+name = "python-dotenv"
+version = "1.2.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/82/ed/0301aeeac3e5353ef3d94b6ec08bbcabd04a72018415dcb29e588514bba8/python_dotenv-1.2.2.tar.gz", hash = "sha256:2c371a91fbd7ba082c2c1dc1f8bf89ca22564a087c2c287cd9b662adde799cf3", size = 50135, upload-time = "2026-03-01T16:00:26.196Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0b/d7/1959b9648791274998a9c3526f6d0ec8fd2233e4d4acce81bbae76b44b2a/python_dotenv-1.2.2-py3-none-any.whl", hash = "sha256:1d8214789a24de455a8b8bd8ae6fe3c6b69a5e3d64aa8a8e5d68e694bbcb285a", size = 22101, upload-time = "2026-03-01T16:00:25.09Z" },
+]
+
+[[package]]
 name = "python-json-logger"
 version = "4.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2741,6 +2789,31 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/28/e3/55dcc2cfbc3ca9c29519eb6884dd1415ecb53b0e934862d3559ddcb7e20b/stack_data-0.6.3.tar.gz", hash = "sha256:836a778de4fec4dcd1dcd89ed8abff8a221f58308462e1c4aa2a3cf30148f0b9", size = 44707, upload-time = "2023-09-30T13:58:05.479Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f1/7b/ce1eafaf1a76852e2ec9b22edecf1daa58175c090266e9f6c64afcd81d91/stack_data-0.6.3-py3-none-any.whl", hash = "sha256:d5558e0c25a4cb0853cddad3d77da9891a08cb85dd9f9f91b9f8cd66e511e695", size = 24521, upload-time = "2023-09-30T13:58:03.53Z" },
+]
+
+[[package]]
+name = "tatsu"
+version = "5.15.1"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version < '3.12'",
+]
+sdist = { url = "https://files.pythonhosted.org/packages/dc/0b/46725961e0b77e88352e60b9e78aef268cacd6dfae7f1527a348b0247606/tatsu-5.15.1.tar.gz", hash = "sha256:38b0467dbf086f032a7321023e65a773201c1acdebe0e9ac35c5ec26637e0b0d", size = 133908, upload-time = "2026-01-04T13:39:47.97Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e8/2f/7afdd76cac1511c456fdd880394cd54bc27ff5d991d3cb6b2ce0720b7d80/tatsu-5.15.1-py3-none-any.whl", hash = "sha256:3a1229eec55dcb1da7ae2842b1abf26bb746e92dc6734ab6785e84cecb465f06", size = 80069, upload-time = "2026-01-04T13:39:46.358Z" },
+]
+
+[[package]]
+name = "tatsu"
+version = "5.18.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14'",
+    "python_full_version >= '3.12' and python_full_version < '3.14'",
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9b/86/03190394e9a2a79133d8d48201b1bf0a2eb4326cf510f53f0cc182370e0f/tatsu-5.18.0.tar.gz", hash = "sha256:b1d2859791649e5acffb4a31ef5e86b87c0ffd217390eebb053fe1a34cd8895b", size = 349286, upload-time = "2026-03-18T21:22:39.544Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1d/7c/9dfff64b6fe0042ac343d312ecb8beee34baa6767cec8705419d4a90f8dc/tatsu-5.18.0-py3-none-any.whl", hash = "sha256:011c880d52f60cba1e1cb9ce76a463192646508a3891a82b6c9aaa40239c5c99", size = 167318, upload-time = "2026-03-18T21:22:38.281Z" },
 ]
 
 [[package]]

@@ -15,6 +15,10 @@ scripts/                  # Standalone scripts (data processing, training, etc.)
 docs/                     # Documentation source (MkDocs)
 ```
 
+## Notion Classes to .ics Export
+
+See [Export Notion Classes to .ics](export-classes-ics.md) for a quickstart and CLI usage guide.
+
 ## Development workflow
 
 ### Setup
@@ -63,7 +67,6 @@ just test tests/test_main.py    # by file
 just coverage                   # with coverage report
 ```
 
-
 ### Type annotations
 
 All code must have type annotations: mypy runs in strict mode. Use [Google-style docstrings](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) for documentation:
@@ -85,8 +88,6 @@ def process_data(path: Path, *, normalize: bool = True) -> pd.DataFrame:
 ```
 
 Docstrings are auto-rendered as [API documentation](api.md) by mkdocstrings.
-
-
 
 ## Next steps
 

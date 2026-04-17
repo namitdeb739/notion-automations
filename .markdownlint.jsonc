@@ -1,0 +1,20 @@
+{
+  // MD013: line-length — disabled; technical docs with tables and long URLs
+  //        exceed 80 chars legitimately.
+  "MD013": false,
+
+  // MD024: no-duplicate-heading — allow same heading names under different
+  //        parents (e.g. changelog "Added"/"Fixed" repeated per version).
+  "MD024": { "siblings_only": true },
+
+  // MD041: first-line-heading — disabled; PR templates and some doc files
+  //        intentionally start below H1.
+  "MD041": false,
+
+  // Exclude generated / vendored directories.
+  "globs": [
+    "**/*.md",
+    "!.venv/**",
+    "!.pytest_cache/**"
+  ]
+}

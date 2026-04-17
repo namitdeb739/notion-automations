@@ -1,9 +1,4 @@
-"""Shared test fixtures.
-
-Fixtures defined here are automatically available to all tests without
-importing. Use these as starting points and add project-specific fixtures
-as the codebase grows.
-"""
+"""Shared test fixtures."""
 
 from __future__ import annotations
 
@@ -11,20 +6,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from notion_automations.config import Config
-
 if TYPE_CHECKING:
     from pathlib import Path
-
-
-@pytest.fixture
-def sample_config(tmp_path: Path) -> Config:
-    """A Config instance with temp directories for isolated tests."""
-    return Config(
-        data_dir=tmp_path / "data",
-        output_dir=tmp_path / "output",
-        seed=42,
-    )
 
 
 @pytest.fixture
