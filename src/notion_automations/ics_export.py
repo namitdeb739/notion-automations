@@ -60,11 +60,33 @@ def _snap_to_weekday(date_str: str, byday: str) -> str:
     return d.isoformat()
 
 
+def _iter_occurrences(
+    snapped_start: str,
+    end_date: date,
+    byday: str,
+    weeks_val: str,
+    exam_date: date | None,
+) -> list[date]:
+    """Enumerate all occurrence dates for a recurring class up to the cutoff."""
+    current = date.fromisoformat(snapped_start[:10])
+    step = timedelta(days=7) if weeks_val == "All" else timedelta(days=14)
+    result: list[date] = []
+    while current <= end_date:
+        if exam_date is not None and current >= exam_date:
+            break
+        result.append(current)
+        current += step
+    return result
+
+
 def classes_to_ics(
     classes: list[dict[str, Any]],
     mapping: dict[str, str],
     ics_path: str,
     timezone: str = "Europe/Berlin",
+    fallback_end_by_course: dict[str, str] | None = None,
+    exam_week_by_course: dict[str, str] | None = None,
+    skip_ranges_by_course: dict[str, list[tuple[str, str]]] | None = None,
 ) -> None:
     """Convert a list of Notion Classes DB rows to an iCalendar file.
 
@@ -84,20 +106,6 @@ def classes_to_ics(
     cal = Calendar()
     skipped = 0
 
-    # Derive a fallback semester-end from the latest Dates.end across all rows.
-    # Used for recurring events that have no explicit end date.
-    fallback_semester_end: str | None = (
-        max(
-            (
-                row["properties"].get(mapping["start"], {}).get("date", {}).get("end")
-                or ""
-                for row in classes
-            ),
-            default="",
-        )
-        or None
-    )
-
     for idx, row in enumerate(classes):
         try:
             props = row["properties"]
@@ -116,6 +124,7 @@ def classes_to_ics(
             day_val: str | None = props.get("Day", {}).get("select", {}).get("name")
             byday = _DAY_MAP.get(day_val or "")
             is_recurring = weeks_val and weeks_val != "Single" and byday
+            weeks_str: str = weeks_val or ""
 
             # Dates: single date-range property.
             #   .start = date of first (or only) occurrence
@@ -163,19 +172,73 @@ def classes_to_ics(
 
             # Recurrence rule
             if is_recurring and byday:
-                if weeks_val == "All":
+                course_relations = props.get("Course", {}).get("relation", [])
+                course_id = course_relations[0]["id"] if course_relations else None
+
+                course_fallback = (
+                    fallback_end_by_course.get(course_id)
+                    if fallback_end_by_course and course_id
+                    else None
+                )
+                until_source = semester_end_str or course_fallback
+
+                exam_str = (
+                    exam_week_by_course.get(course_id)
+                    if exam_week_by_course and course_id
+                    else None
+                )
+                exam_date: date | None = (
+                    date.fromisoformat(exam_str[:10]) if exam_str else None
+                )
+
+                if weeks_str == "All":
                     rrule = f"FREQ=WEEKLY;BYDAY={byday}"
                 else:
-                    # Odd/Even: every other week; DTSTART anchors which weeks are hit.
                     rrule = f"FREQ=WEEKLY;INTERVAL=2;BYDAY={byday};WKST=MO"
-                # Add UNTIL (UTC per RFC 5545); fall back to latest end across rows.
-                until_source = semester_end_str or fallback_semester_end
-                if until_source:
+
+                # UNTIL: one day before exam week if available, else semester end.
+                if exam_date is not None:
+                    until_dt = datetime(
+                        exam_date.year, exam_date.month, exam_date.day, tzinfo=tz
+                    ) - timedelta(seconds=1)
+                    until_str = until_dt.astimezone(UTC).strftime("%Y%m%dT%H%M%SZ")
+                    rrule += f";UNTIL={until_str}"
+                elif until_source:
                     until_dt = _combine_date_time(
                         until_source, end_decimal, tz
                     ).astimezone(UTC)
                     rrule += f";UNTIL={until_dt.strftime('%Y%m%dT%H%M%SZ')}"
                 event.extra.append(ContentLine("RRULE", {}, rrule))
+
+                # EXDATE: occurrences that fall within recess/reading weeks.
+                skip_ranges_raw = (
+                    skip_ranges_by_course.get(course_id)
+                    if skip_ranges_by_course and course_id
+                    else None
+                )
+                if skip_ranges_raw and until_source:
+                    skip_ranges = [
+                        (
+                            date.fromisoformat(s[:10]),
+                            date.fromisoformat(e[:10]),
+                        )
+                        for s, e in skip_ranges_raw
+                    ]
+                    end_for_iter = date.fromisoformat(
+                        exam_str[:10] if exam_str else until_source[:10]
+                    )
+                    assert start_date_str  # non-None: checked above
+                    exdates: list[str] = []
+                    for occ_date in _iter_occurrences(
+                        start_date_str, end_for_iter, byday, weeks_str, exam_date
+                    ):
+                        if any(rs <= occ_date <= re for rs, re in skip_ranges):
+                            occ_dt = _combine_date_time(
+                                occ_date.isoformat(), start_decimal, tz
+                            ).astimezone(UTC)
+                            exdates.append(occ_dt.strftime("%Y%m%dT%H%M%SZ"))
+                    if exdates:
+                        event.extra.append(ContentLine("EXDATE", {}, ",".join(exdates)))
 
             cal.events.add(event)
         except Exception as e:

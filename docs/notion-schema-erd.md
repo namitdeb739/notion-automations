@@ -1,7 +1,7 @@
 # Notion Schema: School Dashboard ERD
 
 > **Status**: Fully confirmed from the API (School Dashboard integration).
-> Last updated: 2026-04-17.
+> Last updated: 2026-04-18.
 
 ## Entity Relationship Diagram
 
@@ -16,7 +16,7 @@ erDiagram
         date   RecessWeek
         date   ReadingWeek
         date   ExaminationWeeks
-        status Status               "Not started | In progress | Done"
+        formula Status              "Not started | In progress | Done"
     }
 
     COURSES {
@@ -25,6 +25,8 @@ erDiagram
         number MCs                  "modular credits"
         select Grade                "A+ A A- B+ B B- C+ C D D+ F CS CU IP Planned"
         url    CourseWebsite
+        url    GitHubRepo
+        formula Status              "Not started | In progress | Done"
         formula WeightedPoints
         formula GradePoints
         formula CountedMCs
@@ -142,7 +144,7 @@ Tracks all academic semesters across NUS and TUM. Current data spans Y1S1 (Aug 2
 | Recess Week | date | |
 | Reading Week | date | |
 | Examination Weeks | date | |
-| Status | status | `Not started` → `In progress` → `Done` |
+| Status | formula | `"Not started"` / `"In progress"` / `"Done"` derived from `Semester Dates` |
 | Courses | relation | → Courses (backlink) |
 | Total MCs | rollup | sum of Courses.MCs |
 | Counted MCs | rollup | sum of Courses.CountedMCs |
@@ -165,9 +167,11 @@ One row per enrolled course across all semesters and universities.
 | MCs | number | Modular credits / ECTS |
 | Grade | select | `A+`…`F`, `CS`, `CU`, `IP`, `Planned` |
 | Course Website | url | |
+| GitHub Repo | url | Added by `setup-semester`; links to course GitHub repo |
 | Classes | relation | → Classes (backlink) |
 | Degree Requirement Items | relation | → Degree Requirement Items |
 | Minor Requirement Items | relation | → Minor Requirement Items |
+| Status | formula | `"Not started"` / `"In progress"` / `"Done"` derived from linked Semester's Status |
 | Weighted Points, Grade Points, Counted MCs, Pass | formula | GPA computation fields |
 | Semester Start/End Date, Class Schedules | formula | Derived display fields |
 
@@ -345,7 +349,7 @@ Aggregation view computing GPA across a set of courses and semesters.
 
 ## CLI Integration
 
-The `notion-automations` CLI (`src/notion_automations/cli.py`) uses the following
+The `na` CLI (`src/notion_automations/cli.py`) uses the following
 fetch functions from `src/notion_automations/notion.py`:
 
 | Function | Source DB | Used for |

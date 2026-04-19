@@ -31,7 +31,7 @@ dev = [
 
 
 [project.scripts]
-notion-automations = "notion_automations.cli:app"
+na = "notion_automations.cli:app"
 
 [build-system]
 requires = ["hatchling"]

@@ -11,7 +11,7 @@ just fix            # auto-fix lint and formatting issues
 just typecheck      # mypy --strict
 just test           # pytest with coverage
 just docs           # serve docs locally at http://localhost:8000
-just run [args]     # notion-automations CLI
+just run [args]     # na CLI (notion-automations umbrella)
 ```
 
 ## Architecture

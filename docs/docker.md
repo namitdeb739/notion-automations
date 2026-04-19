@@ -15,7 +15,7 @@ The `Dockerfile` is structured for fast rebuilds and safer runtime defaults:
 2. Installs dependencies first (`uv sync --no-dev --no-install-project`): cached unless `pyproject.toml` or `uv.lock` change
 3. Copies `README.md` and source, then installs the project
 4. Drops privileges to a non-root `app` user before runtime
-5. Runs via `uv run notion-automations`
+5. Runs via `uv run na`
 
 The `docker-compose.yml` uses the repo root as build context and mounts `data/` as a volume with `PYTHONUNBUFFERED=1`. A root-level `.dockerignore` excludes docs, test artifacts, and local environment files from the build context.
 

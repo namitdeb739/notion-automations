@@ -23,7 +23,7 @@ body:
       description: Minimal steps to reproduce the behavior.
       placeholder: |
         1. Install with `uv sync`
-        2. Run `uv run notion-automations`
+        2. Run `uv run na`
         3. See error...
     validations:
       required: true

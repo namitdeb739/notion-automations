@@ -29,6 +29,9 @@ def test_export_classes_ics_cli(monkeypatch: Any) -> None:
         mapping: dict[str, Any],
         ics_path: str,
         timezone: str = "Europe/Berlin",
+        fallback_end_by_course: dict[str, str] | None = None,
+        exam_week_by_course: dict[str, str] | None = None,
+        skip_ranges_by_course: dict[str, list[tuple[str, str]]] | None = None,
     ) -> None:
         called["ics"] = (classes, mapping, ics_path)
         with open(ics_path, "w") as f:
@@ -41,7 +44,7 @@ def test_export_classes_ics_cli(monkeypatch: Any) -> None:
     runner = CliRunner()
     with tempfile.TemporaryDirectory() as tmpdir:
         ics_path = os.path.join(tmpdir, "out.ics")
-        result = runner.invoke(app, ["--ics-path", ics_path])
+        result = runner.invoke(app, ["export-classes-ics", "--ics-path", ics_path])
         assert result.exit_code == 0
         assert os.path.exists(ics_path)
         with open(ics_path) as f:
