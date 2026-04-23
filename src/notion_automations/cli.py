@@ -42,6 +42,16 @@ from notion_automations.todo_create import (
 
 app = typer.Typer()
 
+
+@app.command(name="help")
+def help_cmd() -> None:
+    """List all available na commands."""
+    import click
+
+    ctx = click.get_current_context()
+    typer.echo((ctx.parent or ctx).get_help())
+
+
 # Maps logical field names to actual Notion property names in the Classes DB.
 DEFAULT_MAPPING: dict[str, str] = {
     "name": "Title",
