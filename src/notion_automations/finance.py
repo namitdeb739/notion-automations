@@ -21,7 +21,11 @@ def transaction_to_notion_props(txn: WiseTransaction) -> dict[str, Any]:
     props: dict[str, Any] = {
         "Name": {"title": [{"text": {"content": name}}]},
         "Date": {"date": {"start": txn.date.isoformat()}},
-        "Amount": {"number": float(txn.amount)},
+        "Amount": {
+            "number": float(txn.amount)
+            if txn.direction == "Credit"
+            else -float(txn.amount)
+        },
         "Direction": {"select": {"name": txn.direction}},
         "Source": {"select": {"name": "Wise"}},
         "External ID": {"rich_text": [{"text": {"content": txn.id}}]},
@@ -36,7 +40,7 @@ def transaction_to_notion_props(txn: WiseTransaction) -> dict[str, Any]:
     return props
 
 
-def transaction_exists(notion: Client, external_id: str) -> bool:
+def transaction_exists(notion: Client, external_id: str) -> str | None:
     resp = cast(
         "dict[str, Any]",
         notion.data_sources.query(
@@ -45,16 +49,21 @@ def transaction_exists(notion: Client, external_id: str) -> bool:
             page_size=1,
         ),
     )
-    return len(resp.get("results", [])) > 0
+    results = resp.get("results", [])
+    return str(results[0]["id"]) if results else None
 
 
 def upsert_transaction(notion: Client, txn: WiseTransaction) -> tuple[bool, str]:
-    """Create transaction page if it doesn't already exist.
+    """Create or correct-amount a transaction page.
 
-    Returns (created, page_id). page_id is empty string when skipped.
+    Returns (created, page_id). created=False means the page already existed
+    and its Amount was patched to the correct signed value.
     """
-    if transaction_exists(notion, txn.id):
-        return False, ""
+    existing_id = transaction_exists(notion, txn.id)
+    if existing_id:
+        props = transaction_to_notion_props(txn)
+        notion.pages.update(page_id=existing_id, properties={"Amount": props["Amount"]})
+        return False, existing_id
     props = transaction_to_notion_props(txn)
     page = cast(
         "dict[str, Any]",

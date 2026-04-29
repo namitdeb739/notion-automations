@@ -278,7 +278,7 @@ def export_exams_ics(
         "", help="Timezone (auto-detected: TUM→Europe/Berlin, else Asia/Singapore)"
     ),
     open_calendar: bool = typer.Option(
-        False, "--open", help="Open in Calendar and clean up after import"
+        True, "--open/--no-open", help="Open in Calendar and clean up after import"
     ),
 ) -> None:
     """Export Examinations from Notion to an .ics file with interactive filter."""

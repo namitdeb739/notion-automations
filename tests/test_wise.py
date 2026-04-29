@@ -209,3 +209,54 @@ def test_get_all_transactions_uses_sgd_balance() -> None:
     )
     assert len(txns) == 1
     assert txns[0].id == "CARD-001"
+
+
+def test_get_all_transactions_merges_multiple_sgd_balances() -> None:
+    http = _mock_http(
+        {
+            "/v4/profiles/42/balances": [
+                {"id": 101, "currency": "SGD"},
+                {"id": 102, "currency": "SGD"},  # Wise Jar
+                {"id": 103, "currency": "USD"},
+            ],
+            "/v1/profiles/42/balance-statements/101/statement.json": {
+                "transactions": [_raw_card_debit("CARD-001")]
+            },
+            "/v1/profiles/42/balance-statements/102/statement.json": {
+                "transactions": [_raw_card_debit("CARD-002")]
+            },
+        }
+    )
+    client = WiseClient("tok", _http=http)
+    txns = client.get_all_transactions(
+        42,
+        datetime(2026, 4, 1, tzinfo=UTC),
+        datetime(2026, 4, 30, tzinfo=UTC),
+    )
+    ids = {t.id for t in txns}
+    assert ids == {"CARD-001", "CARD-002"}
+
+
+def test_get_all_transactions_deduplicates_across_balances() -> None:
+    http = _mock_http(
+        {
+            "/v4/profiles/42/balances": [
+                {"id": 101, "currency": "SGD"},
+                {"id": 102, "currency": "SGD"},
+            ],
+            "/v1/profiles/42/balance-statements/101/statement.json": {
+                "transactions": [_raw_card_debit("CARD-001")]
+            },
+            "/v1/profiles/42/balance-statements/102/statement.json": {
+                "transactions": [_raw_card_debit("CARD-001")]  # same txn in both
+            },
+        }
+    )
+    client = WiseClient("tok", _http=http)
+    txns = client.get_all_transactions(
+        42,
+        datetime(2026, 4, 1, tzinfo=UTC),
+        datetime(2026, 4, 30, tzinfo=UTC),
+    )
+    assert len(txns) == 1
+    assert txns[0].id == "CARD-001"

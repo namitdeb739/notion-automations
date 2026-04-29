@@ -135,5 +135,15 @@ class WiseClient:
         since: datetime,
         until: datetime,
     ) -> list[WiseTransaction]:
-        balance_id = self.get_sgd_balance_id(profile_id)
-        return self.get_statement(profile_id, balance_id, since, until)
+        resp = self._client.get(f"/v4/profiles/{profile_id}/balances")
+        resp.raise_for_status()
+        all_balances: list[dict[str, Any]] = resp.json()
+        sgd_ids = [int(b["id"]) for b in all_balances if b.get("currency") == "SGD"]
+        seen: set[str] = set()
+        result: list[WiseTransaction] = []
+        for bid in sgd_ids:
+            for txn in self.get_statement(profile_id, bid, since, until):
+                if txn.id not in seen:
+                    seen.add(txn.id)
+                    result.append(txn)
+        return result

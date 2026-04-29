@@ -36,7 +36,7 @@ def _txn(**kwargs: Any) -> WiseTransaction:
 def test_props_debit_with_merchant() -> None:
     props = transaction_to_notion_props(_txn())
     assert props["Name"]["title"][0]["text"]["content"] == "McDonald's — 25.50 SGD"
-    assert props["Amount"]["number"] == 25.50
+    assert props["Amount"]["number"] == -25.50
     assert props["Direction"]["select"]["name"] == "Debit"
     assert props["Source"]["select"]["name"] == "Wise"
     assert props["External ID"]["rich_text"][0]["text"]["content"] == "CARD-001"
@@ -54,6 +54,7 @@ def test_props_credit_no_merchant() -> None:
         )
     )
     assert props["Direction"]["select"]["name"] == "Credit"
+    assert props["Amount"]["number"] == 500.00
     assert "500.00" in props["Name"]["title"][0]["text"]["content"]
     assert "Merchant" not in props  # omitted when None
 
@@ -97,25 +98,29 @@ def test_props_notes_absent_for_sgd_transaction() -> None:
 def test_transaction_exists_true() -> None:
     notion = MagicMock()
     notion.data_sources.query.return_value = {"results": [{"id": "page-1"}]}
-    assert transaction_exists(notion, "CARD-001") is True
+    assert transaction_exists(notion, "CARD-001") == "page-1"
 
 
 def test_transaction_exists_false() -> None:
     notion = MagicMock()
     notion.data_sources.query.return_value = {"results": []}
-    assert transaction_exists(notion, "CARD-001") is False
+    assert transaction_exists(notion, "CARD-001") is None
 
 
 # --- upsert_transaction ---
 
 
-def test_upsert_skips_existing() -> None:
+def test_upsert_updates_existing_amount() -> None:
     notion = MagicMock()
     notion.data_sources.query.return_value = {"results": [{"id": "existing"}]}
     created, page_id = upsert_transaction(notion, _txn())
     assert created is False
-    assert page_id == ""
+    assert page_id == "existing"
     notion.pages.create.assert_not_called()
+    notion.pages.update.assert_called_once()
+    call_kwargs = notion.pages.update.call_args.kwargs
+    assert call_kwargs["page_id"] == "existing"
+    assert call_kwargs["properties"]["Amount"]["number"] == -25.50  # Debit → negative
 
 
 def test_upsert_creates_new() -> None:
