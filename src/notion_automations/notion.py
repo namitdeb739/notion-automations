@@ -62,6 +62,16 @@ def fetch_classes_db(db_id: str) -> list[dict[str, Any]]:
     return results
 
 
+_EXAMINATIONS_DB_ID = "3519080d-a147-8091-bc99-f1b2c4d598cf"
+
+
+def fetch_examinations_db(db_id: str | None = None) -> list[dict[str, Any]]:
+    """Fetch all rows from the Examinations database."""
+    return fetch_classes_db(
+        db_id or os.environ.get("NOTION_EXAMINATIONS_DB_ID") or _EXAMINATIONS_DB_ID
+    )
+
+
 def fetch_courses_db(ds_id: str | None = None) -> list[dict[str, Any]]:
     """Fetch all rows from the Courses database."""
     notion = get_notion_client()

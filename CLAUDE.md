@@ -41,6 +41,7 @@ The full database schema for both dashboards is documented in
 | Minor Requirement Groups | `33e9080d-a147-8100-8c5e-000bcda820e0` |
 | Minor Requirement Items | `33e9080d-a147-817a-8d4e-000b4f908692` |
 | Grade Point Average | `33d9080d-a147-80a5-b7ff-000b2a470190` |
+| Examinations | `3519080d-a147-8091-bc99-f1b2c4d598cf` (DB ID — classic, no data source) |
 
 Hierarchy: `Semesters` -> `Courses` -> `Classes` (and `Course To-Dos`).
 Degree and minor requirements link back to `Courses`.

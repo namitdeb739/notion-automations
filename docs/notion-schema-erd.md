@@ -404,6 +404,23 @@ Aggregation view computing GPA across a set of courses and semesters.
 
 ---
 
+### Examinations *(School Dashboard)*
+
+**Database ID**: `3519080d-a147-8091-bc99-f1b2c4d598cf`  
+*(Classic database — no separate data source ID)*
+
+One row per examination, linked to the course it belongs to.
+
+| Property | Type | Notes |
+| --- | --- | --- |
+| Title | title | Exam name, e.g. `IN2049 Final Exam` |
+| Date | date | Exam datetime (start + optional end), timezone-aware |
+| Venue | select | TUM room name or `Online` |
+| Code | rollup | `show_original` of `Course.Code` |
+| Course | relation | → Courses (dual_property; backlink named `Examinations` on courses side) |
+
+---
+
 ### Transactions *(Personal Dashboard → Finances)*
 
 **Database ID**: `34f9080d-a147-80c1-ba01-e9fbfd180524`  

@@ -14,7 +14,7 @@ import typer
 from questionary import Style
 
 from notion_automations.gpa_project import GRADE_POINTS, PENDING_GRADES, project_gpa
-from notion_automations.ics_export import classes_to_ics
+from notion_automations.ics_export import classes_to_ics, exams_to_ics
 from notion_automations.notion import (
     apply_template_to_page,
     create_course_todo,
@@ -24,6 +24,7 @@ from notion_automations.notion import (
     fetch_course_todos_for_course,
     fetch_course_todos_templates,
     fetch_courses_db,
+    fetch_examinations_db,
     fetch_gpa_db,
     fetch_page,
     fetch_semesters_db,
@@ -173,7 +174,9 @@ def _interactive_filter(classes: list[Any]) -> list[Any]:
 def export_classes_ics(
     db_id: str = typer.Option("", help="Notion DB ID (default: env var)"),
     ics_path: str = typer.Option("", help="Output .ics path (temp file when --open)"),
-    timezone: str = typer.Option(DEFAULT_TIMEZONE, help="Timezone for class times"),
+    timezone: str = typer.Option(
+        "", help="Timezone (auto-detected: TUM→Europe/Berlin, else Asia/Singapore)"
+    ),
     open_calendar: bool = typer.Option(
         False, "--open", help="Open in Calendar and clean up after import"
     ),
@@ -208,6 +211,7 @@ def export_classes_ics(
     fallback_end_by_course: dict[str, str] = {}
     exam_week_by_course: dict[str, str] = {}
     skip_ranges_by_course: dict[str, list[tuple[str, str]]] = {}
+    universities: set[str] = set()
     unique_course_ids: set[str] = set()
     for row in classes:
         for c in row["properties"].get("Course", {}).get("relation", []):
@@ -219,6 +223,9 @@ def export_classes_ics(
             continue
         sem_page = fetch_page(sem_rels[0]["id"])
         sp = sem_page["properties"]
+        uni = sp.get("University", {}).get("select", {}).get("name", "")
+        if uni:
+            universities.add(uni)
         sem_end = sp.get("Semester Dates", {}).get("date", {}).get("end")
         if sem_end:
             fallback_end_by_course[cid] = sem_end
@@ -233,6 +240,14 @@ def export_classes_ics(
         if skip_raw:
             skip_ranges_by_course[cid] = skip_raw
 
+    if not timezone:
+        if "TUM" in universities:
+            timezone = "Europe/Berlin"
+        elif universities:
+            timezone = "Asia/Singapore"
+        else:
+            timezone = DEFAULT_TIMEZONE
+
     classes_to_ics(
         classes,
         DEFAULT_MAPPING,
@@ -242,6 +257,78 @@ def export_classes_ics(
         exam_week_by_course,
         skip_ranges_by_course,
     )
+
+    if open_calendar:
+        subprocess.run(["open", out_path], check=True)
+        delay = 30
+        typer.echo(f"Opened in Calendar — cleaning up in {delay}s (Ctrl+C to cancel).")
+        try:
+            time.sleep(delay)
+        finally:
+            if os.path.exists(out_path) and (tmp_fd is not None or not ics_path):
+                os.remove(out_path)
+                typer.echo("Cleaned up.")
+
+
+@app.command()
+def export_exams_ics(
+    db_id: str = typer.Option("", help="Examinations DB ID (default: built-in)"),
+    ics_path: str = typer.Option("", help="Output .ics path (temp file when --open)"),
+    timezone: str = typer.Option(
+        "", help="Timezone (auto-detected: TUM→Europe/Berlin, else Asia/Singapore)"
+    ),
+    open_calendar: bool = typer.Option(
+        False, "--open", help="Open in Calendar and clean up after import"
+    ),
+) -> None:
+    """Export Examinations from Notion to an .ics file with interactive filter."""
+    exams = fetch_examinations_db(db_id or None)
+    exams = [row for row in exams if row["properties"].get("Date", {}).get("date")]
+    if not exams:
+        typer.echo("No examinations with a date found.")
+        sys.exit(0)
+
+    if sys.stdin.isatty():
+        exams = _interactive_filter(exams)
+        if not exams:
+            typer.echo("No examinations matched the selection.")
+            sys.exit(0)
+
+    if not timezone:
+        exam_course_ids: set[str] = set()
+        for row in exams:
+            for c in row["properties"].get("Course", {}).get("relation", []):
+                exam_course_ids.add(c["id"])
+        exam_universities: set[str] = set()
+        for cid in exam_course_ids:
+            course_page = fetch_page(cid)
+            sem_rels = course_page["properties"].get("Semester", {}).get("relation", [])
+            if sem_rels:
+                sem_page = fetch_page(sem_rels[0]["id"])
+                uni = (
+                    sem_page["properties"]
+                    .get("University", {})
+                    .get("select", {})
+                    .get("name", "")
+                )
+                if uni:
+                    exam_universities.add(uni)
+        if "TUM" in exam_universities:
+            timezone = "Europe/Berlin"
+        elif exam_universities:
+            timezone = "Asia/Singapore"
+        else:
+            timezone = DEFAULT_TIMEZONE
+
+    tmp_fd: int | None = None
+    out_path = ics_path
+    if open_calendar and not ics_path:
+        tmp_fd, out_path = tempfile.mkstemp(suffix=".ics", prefix="notion_exams_")
+        os.close(tmp_fd)
+    elif not ics_path:
+        out_path = "exams.ics"
+
+    exams_to_ics(exams, out_path, timezone)
 
     if open_calendar:
         subprocess.run(["open", out_path], check=True)

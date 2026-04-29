@@ -249,3 +249,65 @@ def classes_to_ics(
         for chunk in cal.serialize_iter():
             f.write(chunk)
     print(f"Exported {len(cal.events)} events to {ics_path} (skipped {skipped}).")
+
+
+def exams_to_ics(
+    exams: list[dict[str, Any]],
+    ics_path: str,
+    timezone: str = "Europe/Berlin",
+) -> None:
+    """Convert a list of Notion Examinations DB rows to an iCalendar file."""
+    tz = ZoneInfo(timezone)
+    cal = Calendar()
+    skipped = 0
+
+    for idx, row in enumerate(exams):
+        try:
+            props = row["properties"]
+            event = Event()
+
+            name_parts = props.get("Title", {}).get("title", [])
+            event.name = name_parts[0]["plain_text"] if name_parts else "Examination"
+
+            date_obj = props.get("Date", {}).get("date") or {}
+            start_str: str | None = date_obj.get("start")
+            end_str: str | None = date_obj.get("end")
+
+            if not start_str:
+                raise ValueError("No exam date")
+
+            if "T" in start_str:
+                start_dt = datetime.fromisoformat(start_str.replace("Z", "+00:00"))
+                event.begin = (
+                    start_dt
+                    if start_dt.tzinfo is not None
+                    else start_dt.replace(tzinfo=tz)
+                )
+                if end_str and "T" in end_str:
+                    end_dt = datetime.fromisoformat(end_str.replace("Z", "+00:00"))
+                    event.end = (
+                        end_dt
+                        if end_dt.tzinfo is not None
+                        else end_dt.replace(tzinfo=tz)
+                    )
+            else:
+                d = date.fromisoformat(start_str)
+                event.begin = datetime(d.year, d.month, d.day, tzinfo=tz)
+                event.make_all_day()
+
+            venue: str | None = (props.get("Venue", {}).get("select") or {}).get(
+                "name"
+            ) or None
+            event.location = TUM_LOCATION
+            if venue:
+                event.description = f"Venue: {venue}"
+
+            cal.events.add(event)
+        except Exception as e:
+            print(f"[WARN] Skipping exam row {idx}: {e}")
+            skipped += 1
+
+    with open(ics_path, "w") as f:
+        for chunk in cal.serialize_iter():
+            f.write(chunk)
+    print(f"Exported {len(cal.events)} exam events to {ics_path} (skipped {skipped}).")
