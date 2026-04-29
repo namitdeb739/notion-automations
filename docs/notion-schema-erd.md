@@ -1,9 +1,9 @@
-# Notion Schema: School Dashboard ERD
+# Notion Schema: School Dashboard & Personal Dashboard ERD
 
-> **Status**: Fully confirmed from the API (School Dashboard integration).
-> Last updated: 2026-04-18.
+> **Status**: Fully confirmed from the API (School Dashboard + Personal Dashboard integrations).
+> Last updated: 2026-04-27.
 
-## Entity Relationship Diagram
+## School Dashboard ERD
 
 ```mermaid
 erDiagram
@@ -126,11 +126,63 @@ erDiagram
 
 ---
 
+## Personal Dashboard ERD
+
+```mermaid
+erDiagram
+    TRANSACTIONS {
+        title   Name            PK  "auto: Merchant — Amount SGD"
+        date    Date                "exact datetime, Asia/Singapore"
+        number  Amount              "SGD format, always positive"
+        select  Direction           "Debit | Credit"
+        select  Category            "Food | Transport | Groceries | Bills | Subscriptions | Travel | Shopping | Income | Other"
+        select  Source              "Wise | OCBC"
+        text    Merchant
+        text    ExternalID          "Wise transaction id — dedup key"
+        formula Month               "formatDate(Date, YYYY-MM)"
+        text    Notes               "raw payload / audit"
+    }
+
+    PERSONAL_TODOS {
+        title  Name             PK
+        status Status               "Not started | In progress | Done"
+        select Priority             "High | Medium | Low"
+        date   DueDate
+        formula Warning             "overdue indicator"
+        url    URL
+        people Assignee
+    }
+
+    FASHION_WISHLIST {
+        title  Name             PK
+        select Status               "Wishlisting | Purchased | Passed"
+        select Brand                "Uniqlo | Zara | COS | Acne Studios | Arket | Nike | New Balance | Adidas | Salomon | Other"
+        select Category             "T-Shirts | Polo Shirts | Shirts | Shorts | Pants | Outerwear | Footwear | Accessories | Bags | Gym & Lounge Wear"
+        select Size                 "XS | S | M | L | XL"
+        number PriceSGD             "SGD format"
+        url    URL
+    }
+
+    MISCELLANEOUS_WISHLIST {
+        title  Name             PK
+        select Status               "Wishlisting | Purchased | Passed"
+        select Brand                "Uniqlo | Zara | COS | Acne Studios | Arket | Nike | New Balance | Adidas | Salomon | Other"
+        select Category             "Technology"
+        number PriceSGD             "SGD format"
+        url    URL
+    }
+
+    PERSONAL_TODOS     ||--o{ PERSONAL_TODOS   : "sub-item"
+```
+
+---
+
 ## Database Reference
 
 ### Semesters
 
-**Data Source ID**: `33d9080d-a147-8048-819c-000b3f1a4d1d`
+**Data Source ID**: `33d9080d-a147-8048-819c-000b3f1a4d1d`  
+**Database ID**: `33d9080d-a147-80bc-b7b8-ca356e4c928e`
 
 Tracks all academic semesters across NUS and TUM. Current data spans Y1S1 (Aug 2023) through Y4S2 (May 2027), with the active semester being Y3S2/Summer 2026 at TUM.
 
@@ -155,7 +207,7 @@ Tracks all academic semesters across NUS and TUM. Current data spans Y1S1 (Aug 2
 ### Courses
 
 **Data Source ID**: `33d9080d-a147-80f1-91a1-000b0a393b27`  
-**Database ID** (used in relations): `33d9080d-a147-806d-8b04-c0f0516bac16`
+**Database ID**: `33d9080d-a147-806d-8b04-c0f0516bac16`
 
 One row per enrolled course across all semesters and universities.
 
@@ -221,7 +273,8 @@ One row per scheduled class session (lecture, exercise, seminar). This is the pr
 
 ### Course To-Dos
 
-**Data Source ID**: `33d9080d-a147-8093-ab2d-000bd2b04c53`
+**Data Source ID**: `33d9080d-a147-8093-ab2d-000bd2b04c53`  
+**Database ID**: `33d9080d-a147-8001-b1e5-decc1f191c26`
 
 Hierarchical task list scoped to individual courses (lectures, assignments, etc.).
 
@@ -242,7 +295,8 @@ Hierarchical task list scoped to individual courses (lectures, assignments, etc.
 
 ### Admin To-Dos
 
-**Data Source ID**: `33d9080d-a147-81be-b7c2-000b1d69d515`
+**Data Source ID**: `33d9080d-a147-81be-b7c2-000b1d69d515`  
+**Database ID**: `33d9080d-a147-8070-bc49-f31d9d573259`
 
 Non-academic administrative tasks (housing, financials, exchange programme admin, etc.).
 
@@ -261,7 +315,8 @@ Non-academic administrative tasks (housing, financials, exchange programme admin
 
 ### Degree Requirement Groups
 
-**Data Source ID**: `33e9080d-a147-808d-a1d6-000b91b2ecfb`
+**Data Source ID**: `33e9080d-a147-808d-a1d6-000b91b2ecfb`  
+**Database ID**: `33e9080d-a147-8004-882b-fb9fd12eac12`
 
 Top-level groupings of degree requirements (e.g. Common Curriculum, Programme Requirements).
 
@@ -296,7 +351,8 @@ Individual requirements within a degree group, each optionally linked to a cours
 
 ### Minor Requirement Groups
 
-**Data Source ID**: `33e9080d-a147-8100-8c5e-000bcda820e0`
+**Data Source ID**: `33e9080d-a147-8100-8c5e-000bcda820e0`  
+**Database ID**: `33e9080d-a147-8035-aa31-f2a54c5e0d10`
 
 Top-level groupings for minor requirements (e.g. Minor in Innovation & Design).
 
@@ -332,7 +388,8 @@ Individual requirements for a minor, linked to courses.
 
 ### Grade Point Average
 
-**Data Source ID**: `33d9080d-a147-80a5-b7ff-000b2a470190`
+**Data Source ID**: `33d9080d-a147-80a5-b7ff-000b2a470190`  
+**Database ID**: `33d9080d-a147-80d3-8dd5-db13a464dc8d`
 
 Aggregation view computing GPA across a set of courses and semesters.
 
@@ -344,6 +401,96 @@ Aggregation view computing GPA across a set of courses and semesters.
 | Weighted GP | rollup | sum of Courses.WeightedPoints |
 | Total Counted MCs | rollup | sum of Courses.CountedMCs |
 | GPA | formula | WeightedGP / TotalCountedMCs |
+
+---
+
+### Transactions *(Personal Dashboard → Finances)*
+
+**Database ID**: `34f9080d-a147-80c1-ba01-e9fbfd180524`  
+**Data Source ID**: `34f9080d-a147-8008-9a9e-000b8a398d11`
+
+One row per financial transaction from Wise (and eventually OCBC). All amounts in SGD.
+
+| Property | Type | Notes |
+| --- | --- | --- |
+| Name | title | Auto-filled: `"{Merchant} — {Amount} SGD"` |
+| Date | date | Exact datetime, Asia/Singapore timezone |
+| Amount | number | SGD, always positive |
+| Direction | select | `Debit`, `Credit` |
+| Category | select | `Food`, `Transport`, `Groceries`, `Bills`, `Subscriptions`, `Travel`, `Shopping`, `Income`, `Other` |
+| Source | select | `Wise`, `OCBC` |
+| Merchant | rich text | |
+| External ID | rich text | Wise transaction `id` — deduplication key |
+| Month | formula | `formatDate(Date, "YYYY-MM")` — for grouping only |
+| Notes | rich text | Raw payload / audit trail |
+
+---
+
+### Personal To-Dos *(Personal Dashboard)*
+
+**Data Source ID**: `3499080d-a147-814a-93a5-000ba80ccb85`  
+**Database ID**: `3499080d-a147-8015-b0d8-d34f98f12ad1`
+
+General personal task list, separate from the school-scoped Course/Admin To-Dos.
+
+| Property | Type | Values |
+| --- | --- | --- |
+| Name | title | |
+| Status | status | `Not started`, `In progress`, `Done` |
+| Priority | select | `High`, `Medium`, `Low` |
+| Due Date | date | |
+| Warning | formula | `"⚠️"` when overdue, else `""` |
+| URL | url | |
+| Assignee | people | |
+| Parent item / Sub-item | relation | → self (hierarchical tasks) |
+
+---
+
+### Fashion Wishlist *(Personal Dashboard → Shopping)*
+
+**Database ID**: `34c9080d-a147-8177-a4e3-d04c0e29349a`
+
+Clothing and accessory wishlist with purchase tracking.
+
+| Property | Type | Values |
+| --- | --- | --- |
+| Name | title | |
+| Status | select | `Wishlisting`, `Purchased`, `Passed` |
+| Brand | select | `Uniqlo`, `Zara`, `COS`, `Acne Studios`, `Arket`, `Nike`, `New Balance`, `Adidas`, `Salomon`, `Other` |
+| Category | select | `T-Shirts`, `Polo Shirts`, `Shirts`, `Shorts`, `Pants`, `Outerwear`, `Footwear`, `Accessories`, `Bags`, `Gym & Lounge Wear` |
+| Size | select | `XS`, `S`, `M`, `L`, `XL` |
+| Price (SGD) | number | SGD format |
+| URL | url | |
+
+---
+
+### Miscellaneous Wishlist *(Personal Dashboard → Shopping)*
+
+**Database ID**: `34f9080d-a147-80d9-b2a4-f852a53bc255`
+
+Non-fashion wishlist (currently technology items).
+
+| Property | Type | Values |
+| --- | --- | --- |
+| Name | title | |
+| Status | select | `Wishlisting`, `Purchased`, `Passed` |
+| Brand | select | Same options as Fashion Wishlist |
+| Category | select | `Technology` |
+| Price (SGD) | number | SGD format |
+| URL | url | |
+
+---
+
+## Inaccessible Databases
+
+Two databases in the Personal Dashboard are not shared with the integration and cannot be read via the API. They appear in the main page body (not the Appendix).
+
+| Block ID | Location | Title |
+| --- | --- | --- |
+| `3499080d-a147-80d2-a756-c27ee5563db2` | Personal Dashboard (top) | Untitled |
+| `34c9080d-a147-8033-9742-d71c353f90c7` | Personal Dashboard → Shopping | Untitled |
+
+To make these accessible: share them with the integration in Notion settings.
 
 ---
 

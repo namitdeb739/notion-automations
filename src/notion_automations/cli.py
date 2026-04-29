@@ -4,13 +4,10 @@ import subprocess
 import sys
 import tempfile
 import time
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from zoneinfo import ZoneInfo
-
-if TYPE_CHECKING:
-    from datetime import datetime
 
 import questionary
 import typer
@@ -920,3 +917,73 @@ def setup_semester() -> None:
         typer.echo(f"created {sem_dir}.base")
 
     typer.echo(f"\nDone — {len(created)} repo(s) created, {len(skipped)} skipped.")
+
+
+@app.command()
+def wise_sync(
+    days: int = typer.Option(7, help="Look-back window in days"),
+    since: str = typer.Option(
+        "", "--since", help="Start date YYYY-MM-DD (overrides --days)"
+    ),
+    profile_id: int = typer.Option(
+        0, "--profile-id", help="Wise profile ID (auto-detected if 0)"
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Print without writing to Notion"
+    ),
+) -> None:
+    """Sync recent Wise transactions to the Notion Finance DB."""
+    from notion_automations.finance import upsert_transaction
+    from notion_automations.notion import get_notion_client
+    from notion_automations.wise import WiseClient
+
+    wise_token = os.environ.get("WISE_API_TOKEN")
+    if not wise_token:
+        typer.echo("WISE_API_TOKEN environment variable not set.")
+        raise typer.Exit(1)
+
+    until = datetime.now(UTC)
+    start = (
+        datetime.fromisoformat(since).replace(tzinfo=UTC)
+        if since
+        else until - timedelta(days=days)
+    )
+
+    wise = WiseClient(wise_token)
+    pid = profile_id or wise.get_personal_profile_id()
+
+    notion = get_notion_client()
+
+    typer.echo(
+        f"Fetching transactions {start.date()} → {until.date()} (profile {pid})…"
+    )
+    transactions = wise.get_all_transactions(pid, start, until)
+
+    if not transactions:
+        typer.echo("No transactions found.")
+        return
+
+    col = min(
+        max(len(t.merchant or t.reference or "Unknown") for t in transactions), 40
+    )
+    created_count = skipped_count = 0
+
+    for txn in transactions:
+        label = (txn.merchant or txn.reference or "Unknown")[:col]
+        line = (
+            f"  {txn.date.strftime('%Y-%m-%d %H:%M')}  "
+            f"{label:<{col}}  {txn.direction:<6}  SGD {txn.amount:.2f}"
+        )
+        if dry_run:
+            typer.echo(line)
+            continue
+        was_created, _ = upsert_transaction(notion, txn)
+        status = "created" if was_created else "skip   "
+        if was_created:
+            created_count += 1
+        else:
+            skipped_count += 1
+        typer.echo(f"  {status} {line.lstrip()}")
+
+    if not dry_run:
+        typer.echo(f"\nDone — {created_count} created, {skipped_count} skipped.")

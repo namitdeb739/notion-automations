@@ -238,10 +238,9 @@ def fetch_course_todos_for_course(
             result.append(row)
     return sorted(
         result,
-        key=lambda r: (r["properties"].get("Due Date") or {})
-        .get("date", {})
-        .get("start")
-        or "",
+        key=lambda r: (
+            (r["properties"].get("Due Date") or {}).get("date", {}).get("start") or ""
+        ),
     )
 
 

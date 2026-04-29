@@ -24,10 +24,10 @@ just run [args]     # na CLI (notion-automations umbrella)
 
 ## Notion Schema
 
-The full database schema for the school dashboard is documented in
+The full database schema for both dashboards is documented in
 `docs/notion-schema-erd.md`. Read it before touching any Notion-related code.
 
-Key databases and their data source IDs:
+### School Dashboard — data source IDs
 
 | Database | Data Source ID |
 | --- | --- |
@@ -44,6 +44,17 @@ Key databases and their data source IDs:
 
 Hierarchy: `Semesters` -> `Courses` -> `Classes` (and `Course To-Dos`).
 Degree and minor requirements link back to `Courses`.
+
+### Personal Dashboard — database IDs
+
+These IDs are hardcoded in their respective modules; no env vars required.
+
+| Database | Database ID |
+| --- | --- |
+| Transactions (Finance) | `34f9080d-a147-80c1-ba01-e9fbfd180524` |
+| Personal To-Dos | `3499080d-a147-8015-b0d8-d34f98f12ad1` |
+| Fashion Wishlist | `34c9080d-a147-8177-a4e3-d04c0e29349a` |
+| Miscellaneous Wishlist | `34f9080d-a147-80d9-b2a4-f852a53bc255` |
 
 **Keep `docs/notion-schema-erd.md` up to date** when adding new databases,
 properties, or relations. Run the schema explorer script in that doc to
