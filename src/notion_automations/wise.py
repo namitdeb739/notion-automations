@@ -155,7 +155,10 @@ class WiseClient:
         since: datetime,
         until: datetime,
     ) -> list[WiseTransaction]:
-        resp = self._client.get(f"/v4/profiles/{profile_id}/balances")
+        resp = self._client.get(
+            f"/v4/profiles/{profile_id}/balances",
+            params=[("types", "STANDARD"), ("types", "SAVINGS")],
+        )
         resp.raise_for_status()
         all_balances: list[dict[str, Any]] = resp.json()
         seen: set[str] = set()
