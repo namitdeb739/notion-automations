@@ -16,14 +16,15 @@ _BASE = "https://api.wise.com"
 class WiseTransaction:
     id: str
     date: datetime
-    amount: Decimal  # always positive, in SGD
+    amount: Decimal  # always positive, in native balance currency
+    currency: str  # e.g. "SGD", "EUR", "GBP"
     direction: str  # "Debit" or "Credit" — matches Notion select values
     merchant: str | None
     reference: str | None
     transaction_type: str  # e.g. CARD, TRANSFER, CONVERSION, FEE
-    original_amount: Decimal | None  # pre-conversion amount; None for SGD transactions
-    original_currency: str | None  # e.g. "GBP"; None for SGD transactions
-    exchange_rate: Decimal | None  # SGD per original unit; None for SGD transactions
+    original_amount: Decimal | None  # pre-conversion; only for cross-currency card txns
+    original_currency: str | None
+    exchange_rate: Decimal | None
 
 
 def _parse_txn(raw: dict[str, Any]) -> WiseTransaction:
@@ -32,6 +33,7 @@ def _parse_txn(raw: dict[str, Any]) -> WiseTransaction:
 
     amount_val = Decimal(str(raw["amount"]["value"]))
     amount = abs(amount_val)
+    currency: str = raw["amount"].get("currency", "SGD")
 
     details: dict[str, Any] = raw.get("details") or {}
     merchant_obj: dict[str, Any] = details.get("merchant") or {}
@@ -47,13 +49,14 @@ def _parse_txn(raw: dict[str, Any]) -> WiseTransaction:
     else:
         merchant = None
 
-    # Original (pre-conversion) amount — present when a foreign currency card was used.
+    # Original (pre-conversion) amount — present when a foreign currency card was used
+    # from an SGD balance (the balance shows SGD debited; details shows foreign amount).
     orig_amount_obj: dict[str, Any] = details.get("amount") or {}
     orig_currency: str | None = orig_amount_obj.get("currency") or None
     original_amount: Decimal | None = None
     original_currency: str | None = None
     exchange_rate: Decimal | None = None
-    if orig_currency and orig_currency != "SGD":
+    if orig_currency and orig_currency != currency:
         original_amount = abs(Decimal(str(orig_amount_obj["value"])))
         original_currency = orig_currency
         exchange_obj: dict[str, Any] = raw.get("exchangeDetails") or {}
@@ -68,6 +71,7 @@ def _parse_txn(raw: dict[str, Any]) -> WiseTransaction:
         id=raw["referenceNumber"],
         date=date,
         amount=amount,
+        currency=currency,
         direction=direction,
         merchant=merchant,
         reference=reference,
@@ -115,11 +119,12 @@ class WiseClient:
         balance_id: int,
         since: datetime,
         until: datetime,
+        currency: str = "SGD",
     ) -> list[WiseTransaction]:
         resp = self._client.get(
             f"/v1/profiles/{profile_id}/balance-statements/{balance_id}/statement.json",
             params={
-                "currency": "SGD",
+                "currency": currency,
                 "intervalStart": since.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                 "intervalEnd": until.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                 "type": "COMPACT",
@@ -138,11 +143,12 @@ class WiseClient:
         resp = self._client.get(f"/v4/profiles/{profile_id}/balances")
         resp.raise_for_status()
         all_balances: list[dict[str, Any]] = resp.json()
-        sgd_ids = [int(b["id"]) for b in all_balances if b.get("currency") == "SGD"]
         seen: set[str] = set()
         result: list[WiseTransaction] = []
-        for bid in sgd_ids:
-            for txn in self.get_statement(profile_id, bid, since, until):
+        for b in all_balances:
+            bal_currency = str(b.get("currency", "SGD"))
+            bid = int(b["id"])
+            for txn in self.get_statement(profile_id, bid, since, until, bal_currency):
                 if txn.id not in seen:
                     seen.add(txn.id)
                     result.append(txn)

@@ -18,6 +18,7 @@ def _txn(**kwargs: Any) -> WiseTransaction:
         "id": "CARD-001",
         "date": datetime(2026, 4, 15, 10, 30, tzinfo=UTC),
         "amount": Decimal("25.50"),
+        "currency": "SGD",
         "direction": "Debit",
         "merchant": "McDonald's",
         "reference": "McDonald's Singapore",

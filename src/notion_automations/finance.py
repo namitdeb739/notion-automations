@@ -17,7 +17,7 @@ _FINANCE_DS_ID = "34f9080d-a147-8008-9a9e-000b8a398d11"
 
 def transaction_to_notion_props(txn: WiseTransaction) -> dict[str, Any]:
     label = txn.merchant or txn.reference or "Unknown"
-    name = f"{label} — {txn.amount:.2f} SGD"
+    name = f"{label} — {txn.amount:.2f} {txn.currency}"
     props: dict[str, Any] = {
         "Name": {"title": [{"text": {"content": name}}]},
         "Date": {"date": {"start": txn.date.isoformat()}},

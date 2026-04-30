@@ -52,6 +52,7 @@ def test_parse_txn_debit_card() -> None:
     assert txn.id == "CARD-abc123"
     assert txn.direction == "Debit"
     assert txn.amount == Decimal("25.50")
+    assert txn.currency == "SGD"
     assert txn.merchant == "McDonald's"
     assert txn.date == datetime(2026, 4, 15, 10, 30, 0, tzinfo=UTC)
     assert txn.transaction_type == "CARD"
@@ -211,19 +212,29 @@ def test_get_all_transactions_uses_sgd_balance() -> None:
     assert txns[0].id == "CARD-001"
 
 
-def test_get_all_transactions_merges_multiple_sgd_balances() -> None:
+def test_get_all_transactions_merges_all_balances() -> None:
+    eur_txn = {
+        "type": "DEBIT",
+        "date": "2026-04-23T14:00:00.000Z",
+        "amount": {"value": -119.98, "currency": "EUR"},
+        "details": {"type": "CARD", "description": "Qh5f7l Deb"},
+        "referenceNumber": "CARD-EUR-001",
+    }
     http = _mock_http(
         {
             "/v4/profiles/42/balances": [
                 {"id": 101, "currency": "SGD"},
                 {"id": 102, "currency": "SGD"},  # Wise Jar
-                {"id": 103, "currency": "USD"},
+                {"id": 103, "currency": "EUR"},
             ],
             "/v1/profiles/42/balance-statements/101/statement.json": {
                 "transactions": [_raw_card_debit("CARD-001")]
             },
             "/v1/profiles/42/balance-statements/102/statement.json": {
                 "transactions": [_raw_card_debit("CARD-002")]
+            },
+            "/v1/profiles/42/balance-statements/103/statement.json": {
+                "transactions": [eur_txn]
             },
         }
     )
@@ -234,7 +245,10 @@ def test_get_all_transactions_merges_multiple_sgd_balances() -> None:
         datetime(2026, 4, 30, tzinfo=UTC),
     )
     ids = {t.id for t in txns}
-    assert ids == {"CARD-001", "CARD-002"}
+    assert ids == {"CARD-001", "CARD-002", "CARD-EUR-001"}
+    eur = next(t for t in txns if t.id == "CARD-EUR-001")
+    assert eur.currency == "EUR"
+    assert eur.amount == Decimal("119.98")
 
 
 def test_get_all_transactions_deduplicates_across_balances() -> None:
