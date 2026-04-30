@@ -1033,7 +1033,9 @@ def wise_sync(
     start = (
         datetime.fromisoformat(since).replace(tzinfo=UTC)
         if since
-        else until - timedelta(days=days)
+        else (until - timedelta(days=days)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
     )
 
     wise = WiseClient(wise_token)
