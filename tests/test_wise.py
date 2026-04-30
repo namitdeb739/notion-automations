@@ -53,6 +53,7 @@ def test_parse_txn_debit_card() -> None:
     assert txn.direction == "Debit"
     assert txn.amount == Decimal("25.50")
     assert txn.currency == "SGD"
+    assert txn.sgd_equivalent == Decimal("25.50")  # same as amount for SGD
     assert txn.merchant == "McDonald's"
     assert txn.date == datetime(2026, 4, 15, 10, 30, 0, tzinfo=UTC)
     assert txn.transaction_type == "CARD"
@@ -236,6 +237,7 @@ def test_get_all_transactions_merges_all_balances() -> None:
             "/v1/profiles/42/balance-statements/103/statement.json": {
                 "transactions": [eur_txn]
             },
+            "/v1/rates": [{"rate": 1.5461, "source": "EUR", "target": "SGD"}],
         }
     )
     client = WiseClient("tok", _http=http)
@@ -249,6 +251,18 @@ def test_get_all_transactions_merges_all_balances() -> None:
     eur = next(t for t in txns if t.id == "CARD-EUR-001")
     assert eur.currency == "EUR"
     assert eur.amount == Decimal("119.98")
+    assert eur.sgd_equivalent == Decimal("185.50")  # 119.98 * 1.5461, rounded
+    assert eur.exchange_rate == Decimal("1.5461")
+
+
+def test_get_exchange_rate() -> None:
+    http = _mock_http(
+        {"/v1/rates": [{"rate": 1.5461, "source": "EUR", "target": "SGD"}]}
+    )
+    client = WiseClient("tok", _http=http)
+    at = datetime(2026, 4, 23, 14, 0, tzinfo=UTC)
+    rate = client.get_exchange_rate("EUR", "SGD", at)
+    assert rate == Decimal("1.5461")
 
 
 def test_get_all_transactions_deduplicates_across_balances() -> None:

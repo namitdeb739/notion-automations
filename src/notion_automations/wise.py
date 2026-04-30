@@ -18,13 +18,14 @@ class WiseTransaction:
     date: datetime
     amount: Decimal  # always positive, in native balance currency
     currency: str  # e.g. "SGD", "EUR", "GBP"
+    sgd_equivalent: Decimal  # always positive, in SGD — used for Notion Amount
     direction: str  # "Debit" or "Credit" — matches Notion select values
     merchant: str | None
     reference: str | None
     transaction_type: str  # e.g. CARD, TRANSFER, CONVERSION, FEE
     original_amount: Decimal | None  # pre-conversion; only for cross-currency card txns
     original_currency: str | None
-    exchange_rate: Decimal | None
+    exchange_rate: Decimal | None  # native units per SGD (or from Wise exchangeDetails)
 
 
 def _parse_txn(raw: dict[str, Any]) -> WiseTransaction:
@@ -50,7 +51,7 @@ def _parse_txn(raw: dict[str, Any]) -> WiseTransaction:
         merchant = None
 
     # Original (pre-conversion) amount — present when a foreign currency card was used
-    # from an SGD balance (the balance shows SGD debited; details shows foreign amount).
+    # from an SGD balance (balance shows SGD debited; details shows the foreign amount).
     orig_amount_obj: dict[str, Any] = details.get("amount") or {}
     orig_currency: str | None = orig_amount_obj.get("currency") or None
     original_amount: Decimal | None = None
@@ -72,6 +73,7 @@ def _parse_txn(raw: dict[str, Any]) -> WiseTransaction:
         date=date,
         amount=amount,
         currency=currency,
+        sgd_equivalent=amount,  # overridden for non-SGD by get_all_transactions
         direction=direction,
         merchant=merchant,
         reference=reference,
@@ -113,6 +115,19 @@ class WiseClient:
                 return int(b["id"])
         raise RuntimeError("No SGD balance found in Wise account.")
 
+    def get_exchange_rate(self, source: str, target: str, at: datetime) -> Decimal:
+        resp = self._client.get(
+            "/v1/rates",
+            params={
+                "source": source,
+                "target": target,
+                "time": at.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+            },
+        )
+        resp.raise_for_status()
+        rates: list[dict[str, Any]] = resp.json()
+        return Decimal(str(rates[0]["rate"]))
+
     def get_statement(
         self,
         profile_id: int,
@@ -151,5 +166,11 @@ class WiseClient:
             for txn in self.get_statement(profile_id, bid, since, until, bal_currency):
                 if txn.id not in seen:
                     seen.add(txn.id)
+                    if txn.currency != "SGD":
+                        rate = self.get_exchange_rate(txn.currency, "SGD", txn.date)
+                        txn.sgd_equivalent = (txn.amount * rate).quantize(
+                            Decimal("0.01")
+                        )
+                        txn.exchange_rate = rate
                     result.append(txn)
         return result

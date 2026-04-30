@@ -19,6 +19,7 @@ def _txn(**kwargs: Any) -> WiseTransaction:
         "date": datetime(2026, 4, 15, 10, 30, tzinfo=UTC),
         "amount": Decimal("25.50"),
         "currency": "SGD",
+        "sgd_equivalent": Decimal("25.50"),
         "direction": "Debit",
         "merchant": "McDonald's",
         "reference": "McDonald's Singapore",
@@ -52,6 +53,7 @@ def test_props_credit_no_merchant() -> None:
             merchant=None,
             reference="Top up",
             amount=Decimal("500.00"),
+            sgd_equivalent=Decimal("500.00"),
         )
     )
     assert props["Direction"]["select"]["name"] == "Credit"
@@ -91,6 +93,36 @@ def test_props_notes_foreign_currency_no_rate() -> None:
 def test_props_notes_absent_for_sgd_transaction() -> None:
     props = transaction_to_notion_props(_txn())
     assert "Notes" not in props
+
+
+def test_props_non_sgd_balance_uses_sgd_equivalent_in_name_and_amount() -> None:
+    props = transaction_to_notion_props(
+        _txn(
+            currency="EUR",
+            amount=Decimal("119.98"),
+            sgd_equivalent=Decimal("185.50"),
+            original_amount=None,
+            original_currency=None,
+            exchange_rate=Decimal("1.5461"),
+        )
+    )
+    assert props["Name"]["title"][0]["text"]["content"] == "McDonald's — 185.50 SGD"
+    assert props["Amount"]["number"] == -185.50
+    assert props["Notes"]["rich_text"][0]["text"]["content"] == "119.98 EUR @ 1.5461"
+
+
+def test_props_non_sgd_balance_no_rate_in_notes() -> None:
+    props = transaction_to_notion_props(
+        _txn(
+            currency="EUR",
+            amount=Decimal("119.98"),
+            sgd_equivalent=Decimal("185.50"),
+            original_amount=None,
+            original_currency=None,
+            exchange_rate=None,
+        )
+    )
+    assert props["Notes"]["rich_text"][0]["text"]["content"] == "119.98 EUR"
 
 
 # --- transaction_exists ---

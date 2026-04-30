@@ -17,15 +17,16 @@ _FINANCE_DS_ID = "34f9080d-a147-8008-9a9e-000b8a398d11"
 
 def transaction_to_notion_props(txn: WiseTransaction) -> dict[str, Any]:
     label = txn.merchant or txn.reference or "Unknown"
-    name = f"{label} — {txn.amount:.2f} {txn.currency}"
+    name = f"{label} — {txn.sgd_equivalent:.2f} SGD"
+    signed = (
+        float(txn.sgd_equivalent)
+        if txn.direction == "Credit"
+        else -float(txn.sgd_equivalent)
+    )
     props: dict[str, Any] = {
         "Name": {"title": [{"text": {"content": name}}]},
         "Date": {"date": {"start": txn.date.isoformat()}},
-        "Amount": {
-            "number": float(txn.amount)
-            if txn.direction == "Credit"
-            else -float(txn.amount)
-        },
+        "Amount": {"number": signed},
         "Direction": {"select": {"name": txn.direction}},
         "Source": {"select": {"name": "Wise"}},
         "External ID": {"rich_text": [{"text": {"content": txn.id}}]},
@@ -33,7 +34,14 @@ def transaction_to_notion_props(txn: WiseTransaction) -> dict[str, Any]:
     if txn.merchant:
         props["Merchant"] = {"rich_text": [{"text": {"content": txn.merchant}}]}
     if txn.original_amount and txn.original_currency:
+        # Cross-currency SGD card payment: show the foreign amount charged.
         note = f"{txn.original_amount} {txn.original_currency}"
+        if txn.exchange_rate:
+            note += f" @ {txn.exchange_rate}"
+        props["Notes"] = {"rich_text": [{"text": {"content": note}}]}
+    elif txn.currency != "SGD":
+        # Direct payment from a non-SGD balance.
+        note = f"{txn.amount} {txn.currency}"
         if txn.exchange_rate:
             note += f" @ {txn.exchange_rate}"
         props["Notes"] = {"rich_text": [{"text": {"content": note}}]}
