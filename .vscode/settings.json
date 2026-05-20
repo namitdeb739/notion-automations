@@ -13,5 +13,6 @@
   "python.analysis.typeCheckingMode": "basic",
   "files.trimTrailingWhitespace": true,
   "files.insertFinalNewline": true,
-  "editor.rulers": [88]
+  "editor.rulers": [88],
+  "task.allowAutomaticTasks": "on"
 }
