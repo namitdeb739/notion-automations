@@ -21,6 +21,12 @@ just run [args]     # na CLI (notion-automations umbrella)
 - `src/notion_automations/cli.py` — Typer CLI entrypoint
 - `src/notion_automations/notion.py` — Notion API fetch helpers
 - `src/notion_automations/ics_export.py` — iCalendar export logic
+- `src/notion_automations/research.py` — `na research-add`: registry-sourced
+  paper import with three anti-hallucination gates (provenance, cross-registry
+  corroboration, enum grounding). Every fact comes from Crossref or OpenAlex.
+  Taxonomy placement defaults to `--classifier rules` (derived from the
+  Crossref record; no API cost); `--classifier claude` is opt-in and needs
+  `ANTHROPIC_API_KEY`. Both paths pass through the same enum gate.
 
 ## Notion Schema
 
@@ -42,6 +48,8 @@ The full database schema for both dashboards is documented in
 | Minor Requirement Items | `33e9080d-a147-817a-8d4e-000b4f908692` |
 | Grade Point Average | `33d9080d-a147-80a5-b7ff-000b2a470190` |
 | Examinations | `3519080d-a147-8091-bc99-f1b2c4d598cf` (DB ID — classic, no data source) |
+| Research Resources | `349d2b5d-d268-4ffc-871a-16e47b91b540` (nested under the CP4101 page) |
+| Authors | `7fab2ea4-3b88-405d-b9c9-220fb3cf2356` (nested under the CP4101 page) |
 
 Hierarchy: `Semesters` -> `Courses` -> `Classes` (and `Course To-Dos`).
 Degree and minor requirements link back to `Courses`.

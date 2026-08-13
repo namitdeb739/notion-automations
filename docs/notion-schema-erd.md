@@ -111,6 +111,36 @@ erDiagram
         rollup WeightedGP
     }
 
+    RESEARCH_RESOURCES {
+        title   Name            PK  "paper / resource title"
+        text    AuthorString        "verbatim ordered author list — citation source of truth"
+        number  Year
+        select  Venue               "SenSys | ENSsys | IMWUT / UbiComp | IPSN | MobiCom | MobiSys | arXiv | Other"
+        select  Type                "Conference | Workshop | Journal | Preprint | Thesis | Dataset | Software / Repo | Datasheet | Web"
+        multiselect Topics
+        text    DOI
+        url     URL
+        files   PDF
+        formula CiteKey             "<surname><year><firstTitleWord>"
+        select  Status              "Inbox | To Read | Skimmed | Read | Annotated | Cited"
+        select  Relevance           "Core | Supporting | Background | Tangential"
+        multiselect Section         "dissertation chapter"
+        text    KeyTakeaway
+        select  Rating              "★…★★★★★"
+        url     PDFURL              "OpenAlex best OA location; embedded in page body"
+        text    Abstract
+        number  Citations           "OpenAlex cited_by_count snapshot"
+        select  OpenAccess          "Gold | Green | Hybrid | Bronze | Closed"
+        url     CodeData
+        date    ReadOn
+        createdtime Added
+    }
+
+    AUTHORS {
+        title  Name             PK  "Firstname Lastname"
+        rollup PaperCount           "count of Papers"
+    }
+
     SEMESTERS         ||--o{ COURSES           : "contains"
     COURSES           ||--o{ CLASSES           : "has sessions"
     COURSES           ||--o{ COURSE_TODOS      : "has tasks"
@@ -122,6 +152,10 @@ erDiagram
     MINOR_REQ_ITEMS   }o--o| COURSES           : "fulfilled by"
     GPA               }o--o{ COURSES           : "aggregates"
     GPA               }o--o{ SEMESTERS         : "spans"
+    COURSES           ||--o{ RESEARCH_RESOURCES : "CP4101 page hosts"
+    RESEARCH_RESOURCES }o--o{ AUTHORS          : "written by"
+    RESEARCH_RESOURCES }o--o| AUTHORS          : "first author"
+    RESEARCH_RESOURCES }o--o{ RESEARCH_RESOURCES : "cites"
 ```
 
 ---
@@ -418,6 +452,72 @@ One row per examination, linked to the course it belongs to.
 | Venue | select | TUM room name or `Online` |
 | Code | rollup | `show_original` of `Course.Code` |
 | Course | relation | → Courses (dual_property; backlink named `Examinations` on courses side) |
+
+---
+
+### Research Resources *(School Dashboard → CP4101 B.Comp. Dissertation)*
+
+**Data Source ID**: `349d2b5d-d268-4ffc-871a-16e47b91b540`  
+**Database ID**: `8b19af5a-f122-4e54-9c36-1e2d4bc3cc19`
+
+Literature and resources for the CP4101 dissertation. Inline database under the
+`# Research` header of the `B.Comp. Dissertation` course page
+(`33e9080d-a147-806d-a909-ecc7be2baad1`) — it is *not* a top-level dashboard DB.
+
+| Property | Type | Notes |
+| --- | --- | --- |
+| Name | title | Paper / resource title |
+| Author String | text | Verbatim **ordered** author list — source of truth for citations, since Notion relations are unordered |
+| Authors | relation | → Authors (dual; backlink `Papers`) |
+| First Author | relation | → Authors (dual; backlink `First-Authored`) |
+| Year | number | |
+| Venue | select | `SenSys`, `ENSsys`, `IMWUT / UbiComp`, `IPSN`, `MobiCom`, `MobiSys`, `arXiv`, `Other` |
+| Type | select | `Conference`, `Workshop`, `Journal`, `Preprint`, `Thesis`, `Dataset`, `Software / Repo`, `Datasheet`, `Web` |
+| Topics | multi_select | `SMFC`, `Backscatter`, `Soil moisture sensing`, `Energy harvesting`, `Low-power embedded`, `Field deployment`, `Environmental sensing`, `Batteryless` |
+| DOI | text | Bare DOI, e.g. `10.1145/3774906.3802780` |
+| URL | url | Canonical landing page (API key: `userDefined:URL`) |
+| PDF | files | Local copy — survives paywalls and link rot |
+| Cite Key | formula | `<surname><year><firstTitleWord>`, derived from `Author String` + `Year` + `Name` |
+| Status | select | `Inbox`, `To Read`, `Skimmed`, `Read`, `Annotated`, `Cited` |
+| Relevance | select | `Core`, `Supporting`, `Background`, `Tangential` |
+| Section | multi_select | Dissertation chapter the resource will be cited in |
+| Key Takeaway | text | One sentence |
+| Rating | select | `★`…`★★★★★` |
+| Cites / Cited By | relation | Self-relation (dual pair) — citation graph |
+| Added | created_time | |
+
+Registry-populated by `na research-add` (never hand-entered):
+
+| Property | Type | Source |
+| --- | --- | --- |
+| PDF URL | url | OpenAlex `best_oa_location.pdf_url`; also embedded as a `pdf` block at the top of the page body |
+| Abstract | text | Crossref (JATS-stripped), falling back to OpenAlex's inverted index |
+| Citations | number | OpenAlex `cited_by_count` at import time — a snapshot, not live |
+| Open Access | select | OpenAlex `oa_status` → `Gold`/`Green`/`Hybrid`/`Bronze`/`Closed` (diamond folds into Gold) |
+| Code / Data | url | Manual, or `--code` on the CLI |
+| Read On | date | Manual — when you finished reading |
+
+**Views**: `All Resources` (table), `Reading Queue` (table, `Status = To Read`),
+`Pipeline` (board by `Status`), `By Topic` (board), `By Section` (board),
+`Cited (bib export)` (table, `Status = Cited`).
+
+---
+
+### Authors *(School Dashboard → CP4101 B.Comp. Dissertation)*
+
+**Data Source ID**: `7fab2ea4-3b88-405d-b9c9-220fb3cf2356`  
+**Database ID**: `cd913726-768e-4690-ab1e-fbc20b612ebb`
+
+Lookup-only database of researchers, so papers can reference authors by relation.
+Deliberately **not inline** on the dissertation page — it exists purely as a
+relation target.
+
+| Property | Type | Notes |
+| --- | --- | --- |
+| Name | title | `Firstname Lastname` |
+| Papers | relation | → Research Resources (backlink of `Authors`) |
+| First-Authored | relation | → Research Resources (backlink of `First Author`) |
+| Paper Count | rollup | `count` of `Papers` |
 
 ---
 
