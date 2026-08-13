@@ -1076,3 +1076,114 @@ def wise_sync(
 
     if not dry_run:
         typer.echo(f"\nDone — {created_count} created, {skipped_count} skipped.")
+
+
+@app.command()
+def research_add(
+    url: str = typer.Argument(..., help="Paper URL, DOI link, or bare DOI"),
+    doi: str = typer.Option("", "--doi", help="Override DOI resolution"),
+    code_url: str = typer.Option("", "--code", help="Artifact repo or dataset URL"),
+    classifier: str = typer.Option(
+        "rules",
+        "--classifier",
+        help="Taxonomy placement: rules (default, free) | claude | none",
+    ),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip the confirmation"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Verify and print without writing to Notion"
+    ),
+) -> None:
+    """Add a resource to the dissertation Research Resources DB from a URL."""
+    from notion_automations.research import ResearchError, commit, prepare
+
+    if classifier not in {"rules", "claude", "none"}:
+        typer.echo(f"✗ Unknown classifier {classifier!r}: use rules, claude, or none.")
+        raise typer.Exit(1)
+
+    try:
+        typer.echo("Resolving identifier and fetching registry metadata…")
+        prepared = prepare(
+            url,
+            doi_override=doi or None,
+            code_url=code_url or None,
+            classifier=classifier,
+        )
+    except ResearchError as exc:
+        typer.echo(f"✗ {exc}")
+        raise typer.Exit(1) from exc
+
+    record = prepared.record
+    enrich = prepared.enrichment
+    cls = prepared.classification
+    report = prepared.report
+
+    typer.echo("")
+    typer.echo(f"  Title       {record.title}")
+    typer.echo(f"  Authors     {record.author_string}")
+    typer.echo(f"  Year        {record.year or '—'}")
+    typer.echo(f"  Container   {record.container or '—'}")
+    typer.echo(f"  DOI         {record.doi}")
+    typer.echo(f"  URL         {record.url}")
+    typer.echo(f"  PDF         {enrich.pdf_url or '—'}")
+    typer.echo(f"  Open access {enrich.oa_status or '—'}")
+    typer.echo(
+        f"  Citations   {enrich.citations if enrich.citations is not None else '—'}"
+    )
+    typer.echo("")
+    tag = f"({classifier})"
+    typer.echo(f"  Venue       {cls.venue or '—'}      {tag}")
+    typer.echo(f"  Type        {cls.resource_type or '—'}      {tag}")
+    typer.echo(f"  Topics      {', '.join(cls.topics) or '—'}      {tag}")
+    typer.echo(f"  Takeaway    {cls.key_takeaway or '—'}")
+
+    typer.echo("")
+    typer.echo("Verification")
+    typer.echo(
+        "  1. Provenance      "
+        + (
+            "✓ all factual fields match the registries"
+            if not report.provenance
+            else "✗ " + "; ".join(report.provenance)
+        )
+    )
+    if prepared.corroborated_by is None:
+        typer.echo("  2. Corroboration   ⚠ not indexed by OpenAlex — unverified")
+    else:
+        typer.echo(
+            "  2. Corroboration   "
+            + (
+                "✓ Crossref and OpenAlex agree"
+                if not report.corroboration
+                else "✗ " + "; ".join(report.corroboration)
+            )
+        )
+    typer.echo(
+        "  3. Enum grounding  "
+        + (
+            "✓ every value exists in the Notion schema"
+            if not report.dropped_enums
+            else "⚠ dropped (not in schema): " + "; ".join(report.dropped_enums)
+        )
+    )
+
+    if prepared.duplicate_of:
+        typer.echo(f"\n⚠ Already in the database: {prepared.duplicate_of}")
+
+    if not report.ok:
+        typer.echo("\n✗ Verification failed — nothing written.")
+        raise typer.Exit(1)
+
+    if dry_run:
+        typer.echo("\nDry run — nothing written.")
+        return
+
+    if not yes and not typer.confirm("\nAdd to Notion?", default=True):
+        typer.echo("Aborted.")
+        raise typer.Exit(1)
+
+    try:
+        page_url = commit(prepared, code_url=code_url or None)
+    except ResearchError as exc:
+        typer.echo(f"✗ {exc}")
+        raise typer.Exit(1) from exc
+    typer.echo(f"✓ Created {page_url}")
